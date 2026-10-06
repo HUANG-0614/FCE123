@@ -212,9 +212,92 @@
         .status.success { border-left-color: #10b981; background: #0f1d1a; color: #a7f3d0; }
         .status.info { border-left-color: #3b82f6; }
         .status.warning { border-left-color: #f59e0b; background: #1f1a0e; color: #fcd34d; }
+
+        /* ===== 新增：友情链接区域 ===== */
+        .friend-links {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+            padding-top: 18px;
+            border-top: 1px solid #222b40;
+            justify-content: center;
+        }
+        .friend-link {
+            flex: 1 1 200px;
+            background: #0f131f;
+            border: 1px solid #2d3448;
+            border-radius: 16px;
+            padding: 14px 20px;
+            text-decoration: none;
+            color: #d0d9f0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: 0.18s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .friend-link::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: 3px;
+            background: linear-gradient(180deg, #6366f1, #a855f7);
+            opacity: 0.6;
+            transition: 0.18s ease;
+        }
+        .friend-link:hover {
+            background: #1c2235;
+            border-color: #4f46e5;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(79,70,229,0.2);
+        }
+        .friend-link:hover::before {
+            opacity: 1;
+            width: 4px;
+        }
+        .friend-link .link-icon {
+            font-size: 1.6rem;
+            flex-shrink: 0;
+            width: 36px;
+            text-align: center;
+        }
+        .friend-link .link-content {
+            flex: 1;
+            min-width: 0;
+        }
+        .friend-link .link-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #e0e7ff;
+            margin-bottom: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .friend-link .link-desc {
+            font-size: 0.75rem;
+            color: #7b8bb5;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .friend-link .link-arrow {
+            color: #4c5777;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+            transition: 0.18s ease;
+        }
+        .friend-link:hover .link-arrow {
+            color: #a5b4fc;
+            transform: translateX(3px);
+        }
+
         .footer-note {
             font-size: 0.78rem; color: #5c6a8a; text-align: center;
-            margin-top: 14px; border-top: 1px solid #222b40; padding-top: 16px;
+            margin-top: 14px; padding-top: 16px;
+            border-top: 1px solid #222b40;
         }
 
         .file-list-container::-webkit-scrollbar { width: 6px; }
@@ -313,6 +396,26 @@
 
         <div class="status info" id="statusMessage">
             💡 拖拽文件或文件夹，文件夹会自动压缩为 ZIP 再加密。
+        </div>
+
+        <!-- ===== 新增：友情链接 ===== -->
+        <div class="friend-links">
+            <a class="friend-link" href="https://huang-0614.github.io/CUBE/" target="_blank" rel="noopener noreferrer">
+                <div class="link-icon">🧊</div>
+                <div class="link-content">
+                    <div class="link-title">MagicCube Train</div>
+                    <div class="link-desc">魔方训练 · 速度提升</div>
+                </div>
+                <div class="link-arrow">↗</div>
+            </a>
+            <a class="friend-link" href="https://vitalitycat.com/" target="_blank" rel="noopener noreferrer">
+                <div class="link-icon">🐱</div>
+                <div class="link-content">
+                    <div class="link-title">霓猫云</div>
+                    <div class="link-desc">vitalitycat.com</div>
+                </div>
+                <div class="link-arrow">↗</div>
+            </a>
         </div>
 
         <div class="footer-note">
@@ -716,7 +819,6 @@
 
                 if (isZip) {
                     // ===== 解密后直接下载 ZIP 压缩包 =====
-                    // 生成 ZIP 文件名：去掉 .encrypted 后缀，加上 .zip
                     let zipName = file.name.replace(/\.encrypted$/, '') || 'decrypted';
                     if (!zipName.toLowerCase().endsWith('.zip')) {
                         zipName += '.zip';
