@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔐 文件夹压缩加密 · 解密输出 ZIP</title>
+    <style>
+        * { box-sizing: border-box; font-family: system-ui, 'Segoe UI', Roboto, sans-serif; }
+        body {
+            background: #0b0f1a; min-height: 100vh; display: flex;
+            align-items: center; justify-content: center; padding: 16px; margin: 0;
+        }
+        .card {
+            background: #1a1f2e; border-radius: 36px; padding: 36px 32px;
+            max-width: 860px; width: 100%;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.06);
+            color: #e8edff;
+        }
+        h1 {
+            font-size: 2rem; font-weight: 600; margin: 0 0 6px;
+            background: linear-gradient(135deg, #a5b4fc, #c084fc, #f0abfc);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .subhead { color: #9aa4bf; margin-bottom: 24px; font-size: 0.95rem; line-height: 1.6; }
+        .subhead strong { color: #c7d2fe; font-weight: 500; }
+        .badge {
+            background: #2a3149; border-radius: 40px; padding: 4px 12px;
+            font-size: 0.72rem; color: #afbce0; display: inline-block;
+            margin-right: 6px; margin-bottom: 4px;
+        }
+
+        .drop-zone {
+            background: #0f131f; border-radius: 24px; padding: 40px 24px;
+            margin-bottom: 24px; border: 2px dashed #3b4668;
+            transition: all 0.2s ease; text-align: center;
+            position: relative; user-select: none;
+        }
+        .drop-zone.drag-over {
+            border-color: #6366f1; background: #1c2235;
+            box-shadow: 0 0 0 4px rgba(99,102,241,0.2);
+        }
+        .drop-zone svg {
+            width: 56px; height: 56px; stroke: #6366f1; fill: none;
+            stroke-width: 1.5; margin-bottom: 14px; pointer-events: none;
+        }
+        .drop-zone .main-text {
+            font-size: 1.1rem; font-weight: 500; color: #cdd9ff;
+            margin-bottom: 6px; pointer-events: none;
+        }
+        .drop-zone .sub-text {
+            font-size: 0.88rem; color: #6a789b;
+            margin-bottom: 18px; pointer-events: none;
+        }
+        .highlight { color: #818cf8; font-weight: 600; }
+        .pick-buttons {
+            display: flex; gap: 12px; justify-content: center;
+            flex-wrap: wrap; position: relative; z-index: 2;
+        }
+        .btn-icon {
+            background: #252f47; border: 1px solid #33405e;
+            border-radius: 14px; padding: 12px 22px; font-size: 0.9rem;
+            color: #d0d9f0; cursor: pointer; transition: 0.15s;
+            display: inline-flex; align-items: center; gap: 8px;
+            white-space: nowrap; user-select: none;
+        }
+        .btn-icon:hover { background: #2d3a5a; color: white; border-color: #5b6b95; }
+        .btn-icon:active { transform: scale(0.97); }
+
+        #fileInput, #folderInput {
+            position: absolute; width: 0; height: 0;
+            opacity: 0; overflow: hidden; pointer-events: none;
+            z-index: -1;
+        }
+
+        .file-list-container {
+            background: #0f131f; border-radius: 20px; padding: 4px 0;
+            margin-bottom: 22px; border: 1px solid #2d3448;
+            max-height: 240px; overflow-y: auto; display: none;
+        }
+        .file-list-container.visible { display: block; }
+        .file-list-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 14px 18px 10px; font-size: 0.8rem; color: #8b95b0;
+            text-transform: uppercase; letter-spacing: 0.04em;
+            position: sticky; top: 0; background: #0f131f;
+            z-index: 2; border-bottom: 1px solid #1c2336;
+        }
+        .file-list-header button {
+            background: none; border: none; color: #f87171;
+            cursor: pointer; font-size: 0.8rem; font-weight: 500;
+            padding: 4px 12px; border-radius: 20px; transition: 0.15s;
+        }
+        .file-list-header button:hover { background: rgba(248,113,113,0.12); }
+        .file-list { list-style: none; margin: 0; padding: 0 8px 8px; }
+        .file-list li {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 14px; border-radius: 12px;
+            font-size: 0.9rem; color: #b9c2db;
+            transition: 0.1s; border-bottom: 1px solid #1c2336;
+        }
+        .file-list li:last-child { border-bottom: none; }
+        .file-list li:hover { background: #1a2135; }
+        .file-icon { font-size: 1.2rem; width: 28px; text-align: center; flex-shrink: 0; }
+        .file-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .file-size { font-size: 0.75rem; color: #6a789b; flex-shrink: 0; margin-left: 8px; }
+        .remove-btn {
+            background: none; border: none; color: #5c6a8a;
+            cursor: pointer; font-size: 1.1rem; padding: 0 6px;
+            border-radius: 8px; line-height: 1; transition: 0.15s;
+        }
+        .remove-btn:hover { color: #f87171; background: rgba(248,113,113,0.1); }
+        .folder-stats {
+            padding: 8px 18px 14px; font-size: 0.82rem;
+            color: #7b8bb5; border-top: 1px solid #1c2336;
+            display: flex; gap: 18px; flex-wrap: wrap; align-items: center;
+        }
+        .mode-tag {
+            background: #312e81; color: #c7d2fe; padding: 3px 12px;
+            border-radius: 20px; font-size: 0.72rem; font-weight: 500;
+        }
+
+        .key-section {
+            background: #0f131f; border-radius: 20px;
+            padding: 18px 20px 16px; margin-bottom: 20px;
+            border: 1px solid #2d3448;
+        }
+        .section-title {
+            font-size: 0.8rem; text-transform: uppercase;
+            letter-spacing: 0.05em; color: #8b95b0;
+            margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+        }
+        .key-row { display: flex; gap: 10px; flex-wrap: wrap; }
+        .key-input {
+            flex: 3; min-width: 200px; background: #0a0e17;
+            border: 1px solid #2e3a55; border-radius: 14px;
+            padding: 14px 18px; font-size: 1rem; color: #eef2ff;
+            outline: none; transition: 0.15s;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+        }
+        .key-input:focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99,102,241,0.25);
+            background: #0e1320;
+        }
+        .key-input::placeholder {
+            color: #4c5777; font-family: system-ui, sans-serif;
+        }
+        .hint { font-size: 0.78rem; color: #6a789b; margin-top: 10px; }
+
+        .action-buttons { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+        .btn {
+            background: #252f47; border: none; border-radius: 60px;
+            padding: 16px 28px; font-weight: 550; font-size: 0.95rem;
+            color: #d0d9f0; display: inline-flex; align-items: center;
+            justify-content: center; gap: 8px; cursor: pointer;
+            transition: 0.15s; flex: 1 1 auto;
+            border: 1px solid #33405e; letter-spacing: 0.2px;
+        }
+        .btn:hover:not(:disabled) {
+            background: #2d3a5a; color: white; border-color: #5b6b95;
+            transform: scale(1.01);
+        }
+        .btn:active:not(:disabled) { transform: scale(0.98); }
+        .btn:disabled { opacity: 0.35; cursor: not-allowed; filter: grayscale(0.6); }
+        .btn-primary {
+            background: linear-gradient(145deg, #4f46e5, #6366f1);
+            border: 1px solid #818cf8; color: white;
+            box-shadow: 0 6px 14px rgba(79,70,229,0.3);
+        }
+        .btn-primary:hover:not(:disabled) {
+            background: linear-gradient(145deg, #5b52f0, #7376ff);
+            border-color: #a5b4fc;
+            box-shadow: 0 8px 18px rgba(79,70,229,0.45);
+        }
+        .btn-success {
+            background: linear-gradient(145deg, #0f7b5c, #10b981);
+            border-color: #34d399; color: white;
+            box-shadow: 0 6px 14px rgba(16,185,129,0.25);
+        }
+        .btn-success:hover:not(:disabled) {
+            background: linear-gradient(145deg, #128a67, #1bc48a);
+            border-color: #6ee7b7;
+            box-shadow: 0 8px 18px rgba(16,185,129,0.4);
+        }
+
+        .progress-bar {
+            width: 100%; height: 8px; background: #1e2538;
+            border-radius: 10px; margin-bottom: 18px;
+            overflow: hidden; display: none;
+        }
+        .progress-bar.visible { display: block; }
+        .progress-fill {
+            height: 100%; width: 0%;
+            background: linear-gradient(90deg, #4f46e5, #a855f7, #ec4899);
+            border-radius: 10px; transition: width 0.3s ease;
+        }
+        .progress-label {
+            font-size: 0.78rem; color: #8b95b0;
+            margin-top: 6px; text-align: center; display: none;
+        }
+        .progress-label.visible { display: block; }
+
+        .status {
+            padding: 16px 20px; border-radius: 18px;
+            background: #0b101c; border-left: 5px solid #4f46e5;
+            font-size: 0.9rem; color: #b7c3e0;
+            word-break: break-word; line-height: 1.6;
+            transition: 0.2s; border: 1px solid #232d45;
+            border-left-width: 5px; margin-bottom: 8px;
+        }
+        .status.error { border-left-color: #ef4444; background: #1e141a; color: #fca5a5; }
+        .status.success { border-left-color: #10b981; background: #0f1d1a; color: #a7f3d0; }
+        .status.info { border-left-color: #3b82f6; }
+        .status.warning { border-left-color: #f59e0b; background: #1f1a0e; color: #fcd34d; }
+        .footer-note {
+            font-size: 0.78rem; color: #5c6a8a; text-align: center;
+            margin-top: 14px; border-top: 1px solid #222b40; padding-top: 16px;
+        }
+
+        .file-list-container::-webkit-scrollbar { width: 6px; }
+        .file-list-container::-webkit-scrollbar-track { background: #0f131f; border-radius: 10px; }
+        .file-list-container::-webkit-scrollbar-thumb { background: #2d3a55; border-radius: 10px; }
+
+        .lib-loading {
+            display: none; align-items: center; justify-content: center;
+            gap: 10px; padding: 12px; color: #8b95b0; font-size: 0.85rem;
+        }
+        .lib-loading.visible { display: flex; }
+        .spinner {
+            width: 16px; height: 16px; border: 2px solid #2d3a55;
+            border-top-color: #6366f1; border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🔐 文件夹压缩加密</h1>
+        <div class="subhead">
+            <strong>文件夹 → 压缩为 ZIP → 加密成 .encrypted</strong><br>
+            解密后直接得到还原的 <strong>ZIP 压缩包</strong><br>
+            <span class="badge">AES-256-GCM</span>
+            <span class="badge">JSZip 压缩</span>
+            <span class="badge">纯前端</span>
+        </div>
+
+        <div class="lib-loading" id="libLoading">
+            <div class="spinner"></div>
+            <span>正在加载压缩库…</span>
+        </div>
+
+        <!-- 拖拽区域 -->
+        <div class="drop-zone" id="dropZone">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            <div class="main-text">拖拽文件或文件夹到此处</div>
+            <div class="sub-text">文件夹会自动压缩为 ZIP 再加密 · 或 <span class="highlight">点击下方按钮</span></div>
+            <div class="pick-buttons">
+                <button type="button" class="btn-icon" id="pickFilesBtn">📄 选择文件</button>
+                <button type="button" class="btn-icon" id="pickFolderBtn">📁 选择文件夹</button>
+            </div>
+        </div>
+
+        <input type="file" id="fileInput" multiple>
+        <input type="file" id="folderInput" webkitdirectory directory multiple>
+
+        <!-- 文件列表 -->
+        <div class="file-list-container" id="fileListContainer">
+            <div class="file-list-header">
+                <span>📋 已选内容 (<span id="fileCount">0</span>)</span>
+                <button id="clearAllBtn">清空全部</button>
+            </div>
+            <ul class="file-list" id="fileList"></ul>
+            <div class="folder-stats" id="folderStats"></div>
+        </div>
+
+        <!-- 密钥 -->
+        <div class="key-section">
+            <div class="section-title"><i>🔑</i> 加密 / 解密密钥</div>
+            <div class="key-row">
+                <input type="text" id="keyInput" class="key-input" placeholder="输入密钥（任意字符）" value="MySecretKey123" autocomplete="off">
+                <button type="button" class="btn-icon" id="randomKeyBtn">🎲 随机</button>
+            </div>
+            <div class="hint">⚠️ 密钥丢失将无法还原，请务必记住。</div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="action-buttons">
+            <button class="btn btn-primary" id="encryptBtn" disabled>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+                压缩并加密下载
+            </button>
+            <button class="btn btn-success" id="decryptBtn" disabled>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
+                </svg>
+                解密并下载 ZIP
+            </button>
+        </div>
+
+        <div class="progress-bar" id="progressBar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-label" id="progressLabel"></div>
+
+        <div class="status info" id="statusMessage">
+            💡 拖拽文件或文件夹，文件夹会自动压缩为 ZIP 再加密。
+        </div>
+
+        <div class="footer-note">
+            AES-256-GCM 认证加密 · JSZip 文件夹压缩 · 解密后直接得到 ZIP 压缩包
+        </div>
+    </div>
+
+    <!-- JSZip 库 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script>
+        (function() {
+            'use strict';
+
+            // ========== DOM ==========
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+            const folderInput = document.getElementById('folderInput');
+            const pickFilesBtn = document.getElementById('pickFilesBtn');
+            const pickFolderBtn = document.getElementById('pickFolderBtn');
+            const fileListContainer = document.getElementById('fileListContainer');
+            const fileList = document.getElementById('fileList');
+            const fileCountSpan = document.getElementById('fileCount');
+            const folderStats = document.getElementById('folderStats');
+            const clearAllBtn = document.getElementById('clearAllBtn');
+            const keyInput = document.getElementById('keyInput');
+            const randomKeyBtn = document.getElementById('randomKeyBtn');
+            const encryptBtn = document.getElementById('encryptBtn');
+            const decryptBtn = document.getElementById('decryptBtn');
+            const statusMessage = document.getElementById('statusMessage');
+            const progressBar = document.getElementById('progressBar');
+            const progressFill = document.getElementById('progressFill');
+            const progressLabel = document.getElementById('progressLabel');
+            const libLoading = document.getElementById('libLoading');
+
+            // ========== 状态 ==========
+            let currentFiles = [];
+            let isFolderMode = false;
+            let zipAvailable = false;
+
+            // ========== 检查 JSZip ==========
+            function checkZipLib() {
+                if (typeof JSZip !== 'undefined') {
+                    zipAvailable = true;
+                    libLoading.classList.remove('visible');
+                    updateButtons();
+                    return;
+                }
+                libLoading.classList.add('visible');
+                setTimeout(checkZipLib, 300);
+            }
+
+            // ========== 工具 ==========
+            function setStatus(text, type) {
+                type = type || 'info';
+                statusMessage.textContent = text;
+                statusMessage.className = 'status ' + type;
+            }
+
+            function formatFileSize(bytes) {
+                if (bytes === 0) return '0 B';
+                const units = ['B', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(1024));
+                return (bytes / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1) + ' ' + units[i];
+            }
+
+            function getFileIcon(filename) {
+                const ext = (filename.split('.').pop() || '').toLowerCase();
+                const icons = {
+                    jpg:'🖼️',jpeg:'🖼️',png:'🖼️',gif:'🖼️',webp:'🖼️',svg:'🖼️',bmp:'🖼️',
+                    mp4:'🎬',avi:'🎬',mov:'🎬',mkv:'🎬',webm:'🎬',
+                    mp3:'🎵',wav:'🎵',flac:'🎵',aac:'🎵',
+                    pdf:'📕',doc:'📘',docx:'📘',xls:'📗',xlsx:'📗',ppt:'📙',pptx:'📙',
+                    txt:'📄',md:'📝',
+                    zip:'🗜️',rar:'🗜️','7z':'🗜️',tar:'🗜️',gz:'🗜️',
+                    html:'🌐',css:'🎨',js:'⚡',py:'🐍',java:'☕',
+                    exe:'⚡',apk:'📱',dmg:'💿',iso:'💿'
+                };
+                return icons[ext] || '📄';
+            }
+
+            function showProgress(percent, label) {
+                progressBar.classList.add('visible');
+                progressFill.style.width = Math.min(percent, 100) + '%';
+                if (label) {
+                    progressLabel.textContent = label;
+                    progressLabel.classList.add('visible');
+                }
+            }
+
+            function hideProgress() {
+                progressBar.classList.remove('visible');
+                progressLabel.classList.remove('visible');
+                progressFill.style.width = '0%';
+                progressLabel.textContent = '';
+            }
+
+            // ========== 列表 UI ==========
+            function updateFileListUI() {
+                const count = currentFiles.length;
+                fileCountSpan.textContent = count;
+
+                if (count === 0) {
+                    fileListContainer.classList.remove('visible');
+                    fileList.innerHTML = '';
+                    folderStats.innerHTML = '';
+                    updateButtons();
+                    return;
+                }
+
+                fileListContainer.classList.add('visible');
+                const MAX_DISPLAY = 200;
+                const displayFiles = currentFiles.slice(0, MAX_DISPLAY);
+                const hasMore = count > MAX_DISPLAY;
+
+                fileList.innerHTML = displayFiles.map(function(item, index) {
+                    const file = item.file;
+                    const relativePath = item.relativePath || file.name;
+                    const icon = getFileIcon(file.name);
+                    const displayName = relativePath.length > 55
+                        ? '...' + relativePath.slice(-52) : relativePath;
+                    return '<li data-index="' + index + '">' +
+                        '<span class="file-icon">' + icon + '</span>' +
+                        '<span class="file-name" title="' + relativePath.replace(/"/g, '&quot;') + '">' + displayName + '</span>' +
+                        '<span class="file-size">' + formatFileSize(file.size) + '</span>' +
+                        '<button class="remove-btn" data-index="' + index + '" title="移除">✕</button>' +
+                        '</li>';
+                }).join('');
+
+                if (hasMore) {
+                    const moreLi = document.createElement('li');
+                    moreLi.style.cssText = 'justify-content:center;color:#6a789b;font-size:0.8rem;padding:14px;';
+                    moreLi.textContent = '... 还有 ' + (count - MAX_DISPLAY) + ' 个文件未显示';
+                    fileList.appendChild(moreLi);
+                }
+
+                const totalSize = currentFiles.reduce(function(sum, item) { return sum + item.file.size; }, 0);
+                const modeTag = isFolderMode
+                    ? '<span class="mode-tag">📁 文件夹模式 · 将压缩为 ZIP</span>'
+                    : '<span class="mode-tag">📄 文件模式</span>';
+                folderStats.innerHTML =
+                    '<span>📊 原始大小: ' + formatFileSize(totalSize) + '</span>' +
+                    '<span>📦 文件数: ' + count + '</span>' + modeTag;
+
+                fileList.querySelectorAll('.remove-btn').forEach(function(btn) {
+                    btn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        const idx = parseInt(btn.dataset.index, 10);
+                        if (!isNaN(idx)) removeFileAtIndex(idx);
+                    });
+                });
+
+                updateButtons();
+            }
+
+            function removeFileAtIndex(index) {
+                if (index >= 0 && index < currentFiles.length) {
+                    currentFiles.splice(index, 1);
+                    if (currentFiles.length === 0) isFolderMode = false;
+                    updateFileListUI();
+                    setStatus('已移除文件，剩余 ' + currentFiles.length + ' 个。', 'info');
+                }
+            }
+
+            function updateButtons() {
+                const hasFiles = currentFiles.length > 0;
+                encryptBtn.disabled = !hasFiles || !zipAvailable;
+                decryptBtn.disabled = !hasFiles;
+            }
+
+            // ========== 添加文件 ==========
+            function addFiles(newFileItems, isFolder) {
+                if (!newFileItems || newFileItems.length === 0) return;
+
+                if (isFolder) {
+                    if (currentFiles.length > 0) {
+                        if (!confirm('已有文件，是否替换为新的文件夹内容？')) return;
+                    }
+                    currentFiles = [];
+                    isFolderMode = true;
+                } else {
+                    if (isFolderMode) {
+                        if (!confirm('当前为文件夹模式，是否切换为普通文件模式并清空？')) return;
+                        currentFiles = [];
+                        isFolderMode = false;
+                    }
+                }
+
+                if (!isFolder) {
+                    const existingKeys = new Set(currentFiles.map(function(item) {
+                        return item.file.name + '|' + item.file.size;
+                    }));
+                    for (let i = 0; i < newFileItems.length; i++) {
+                        const item = newFileItems[i];
+                        const key = item.file.name + '|' + item.file.size;
+                        if (!existingKeys.has(key)) {
+                            currentFiles.push(item);
+                            existingKeys.add(key);
+                        }
+                    }
+                } else {
+                    currentFiles = newFileItems;
+                }
+
+                updateFileListUI();
+                setStatus('已添加 ' + newFileItems.length + ' 个文件' +
+                    (isFolder ? '（文件夹模式，将压缩为 ZIP）' : '') +
+                    '，共 ' + currentFiles.length + ' 个。', 'info');
+            }
+
+            function clearAllFiles() {
+                currentFiles = [];
+                isFolderMode = false;
+                updateFileListUI();
+                setStatus('已清空所有文件。', 'info');
+                hideProgress();
+            }
+
+            // ========== 递归遍历文件夹（拖拽） ==========
+            function traverseFileTree(entry, fileListArr, path) {
+                return new Promise(function(resolve) {
+                    if (entry.isFile) {
+                        entry.file(function(file) {
+                            const fullPath = path ? path + '/' + file.name : file.name;
+                            fileListArr.push({ file: file, relativePath: fullPath });
+                            resolve();
+                        }, function() { resolve(); });
+                    } else if (entry.isDirectory) {
+                        const dirReader = entry.createReader();
+                        const readEntries = function() {
+                            dirReader.readEntries(function(entries) {
+                                if (entries.length === 0) { resolve(); return; }
+                                let pending = entries.length;
+                                if (pending === 0) { resolve(); return; }
+                                entries.forEach(function(subEntry) {
+                                    traverseFileTree(subEntry, fileListArr,
+                                        path ? path + '/' + entry.name : entry.name
+                                    ).then(function() {
+                                        pending--;
+                                        if (pending === 0) readEntries();
+                                    });
+                                });
+                            }, function() { resolve(); });
+                        };
+                        readEntries();
+                    } else {
+                        resolve();
+                    }
+                });
+            }
+
+            // ========== 加密核心 ==========
+            async function encryptFiles(files, secret) {
+                let dataToEncrypt;
+                let originalSize = 0;
+                let outputName;
+                const needZip = isFolderMode || files.length > 1;
+
+                if (needZip) {
+                    if (!zipAvailable) throw new Error('压缩库未加载完成。');
+
+                    setStatus('📦 正在压缩文件…', 'info');
+                    showProgress(5, '准备压缩…');
+
+                    const zip = new JSZip();
+                    let processed = 0;
+                    originalSize = files.reduce(function(sum, item) { return sum + item.file.size; }, 0);
+
+                    for (let i = 0; i < files.length; i++) {
+                        const item = files[i];
+                        const content = await item.file.arrayBuffer();
+                        zip.file(item.relativePath || item.file.name, content);
+                        processed++;
+                        showProgress(5 + Math.floor((processed / files.length) * 35),
+                            '压缩中 ' + processed + '/' + files.length + '…');
+                    }
+
+                    showProgress(40, '生成 ZIP…');
+                    const zipBlob = await zip.generateAsync({
+                        type: 'arraybuffer',
+                        compression: 'DEFLATE',
+                        compressionOptions: { level: 6 }
+                    }, function(metadata) {
+                        showProgress(40 + Math.floor(metadata.percent * 0.15),
+                            '压缩 ' + Math.floor(metadata.percent) + '%…');
+                    });
+
+                    dataToEncrypt = new Uint8Array(zipBlob);
+                    showProgress(55, '压缩完成');
+
+                    if (isFolderMode) {
+                        const firstPath = (files[0] && files[0].relativePath) || '';
+                        const folderName = firstPath.split('/')[0] || 'encrypted_folder';
+                        outputName = folderName + '.encrypted';
+                    } else {
+                        outputName = 'archive_' + files.length + 'files.encrypted';
+                    }
+                } else {
+                    const file = files[0].file;
+                    originalSize = file.size;
+                    dataToEncrypt = new Uint8Array(await file.arrayBuffer());
+                    outputName = file.name + '.encrypted';
+                    showProgress(10, '读取文件…');
+                }
+
+                setStatus('🔐 正在加密…', 'info');
+                showProgress(60, '派生密钥…');
+
+                const salt = crypto.getRandomValues(new Uint8Array(16));
+                const iv = crypto.getRandomValues(new Uint8Array(12));
+                const key = await deriveKey(secret, salt);
+
+                showProgress(70, '加密数据…');
+                const encryptedContent = await crypto.subtle.encrypt(
+                    { name: 'AES-GCM', iv: iv }, key, dataToEncrypt
+                );
+
+                showProgress(90, '打包输出…');
+                const encryptedBytes = new Uint8Array(encryptedContent);
+                const finalPackage = new Uint8Array(salt.length + iv.length + encryptedBytes.length);
+                finalPackage.set(salt, 0);
+                finalPackage.set(iv, salt.length);
+                finalPackage.set(encryptedBytes, salt.length + iv.length);
+
+                const base64String = arrayBufferToBase64(finalPackage.buffer);
+                const finalContent = 'ENCRYPTED_ARCHIVE_V4\n' + base64String;
+
+                const blob = new Blob([finalContent], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = outputName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                showProgress(100, '完成！');
+                setTimeout(hideProgress, 1000);
+
+                return {
+                    downloadName: outputName,
+                    fileCount: files.length,
+                    originalSize: originalSize,
+                    wasZipped: needZip
+                };
+            }
+
+            // ========== 解密核心（输出 ZIP） ==========
+            async function decryptArchive(file, secret) {
+                const fileText = await file.text();
+
+                const headerV4 = 'ENCRYPTED_ARCHIVE_V4\n';
+                const headerV3 = 'ENCRYPTED_ARCHIVE_V3\n';
+                const headerV2 = 'ENCRYPTED_ARCHIVE_V2\n';
+                let base64Content;
+
+                if (fileText.startsWith(headerV4)) {
+                    base64Content = fileText.slice(headerV4.length).replace(/\s/g, '');
+                } else if (fileText.startsWith(headerV3)) {
+                    base64Content = fileText.slice(headerV3.length).replace(/\s/g, '');
+                } else if (fileText.startsWith(headerV2)) {
+                    base64Content = fileText.slice(headerV2.length).replace(/\s/g, '');
+                } else {
+                    throw new Error('不是有效的加密文件（缺少标识头）。');
+                }
+
+                let combinedBuffer;
+                try {
+                    combinedBuffer = base64ToArrayBuffer(base64Content);
+                } catch (e) {
+                    throw new Error('文件格式无效：Base64 解码失败。');
+                }
+
+                const combined = new Uint8Array(combinedBuffer);
+                if (combined.length < 28) throw new Error('加密文件已损坏。');
+
+                const salt = combined.slice(0, 16);
+                const iv = combined.slice(16, 28);
+                const ciphertext = combined.slice(28);
+
+                showProgress(20, '派生密钥…');
+                const key = await deriveKey(secret, salt);
+
+                showProgress(40, '解密中…');
+                let decryptedBuffer;
+                try {
+                    decryptedBuffer = await crypto.subtle.decrypt(
+                        { name: 'AES-GCM', iv: iv }, key, ciphertext
+                    );
+                } catch (e) {
+                    throw new Error('解密失败：密钥错误或文件已损坏。');
+                }
+
+                const decryptedBytes = new Uint8Array(decryptedBuffer);
+                showProgress(70, '检查内容…');
+
+                // 判断解密后是否为 ZIP
+                const isZip = decryptedBytes.length >= 4 &&
+                    decryptedBytes[0] === 0x50 && decryptedBytes[1] === 0x4B &&
+                    decryptedBytes[2] === 0x03 && decryptedBytes[3] === 0x04;
+
+                if (isZip) {
+                    // ===== 解密后直接下载 ZIP 压缩包 =====
+                    // 生成 ZIP 文件名：去掉 .encrypted 后缀，加上 .zip
+                    let zipName = file.name.replace(/\.encrypted$/, '') || 'decrypted';
+                    if (!zipName.toLowerCase().endsWith('.zip')) {
+                        zipName += '.zip';
+                    }
+
+                    setStatus('📦 解密成功，正在下载 ZIP 压缩包…', 'info');
+                    showProgress(90, '准备下载…');
+
+                    const blob = new Blob([decryptedBytes], { type: 'application/zip' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = zipName;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+
+                    showProgress(100, '完成！');
+                    setTimeout(hideProgress, 1000);
+
+                    return {
+                        type: 'zip',
+                        name: zipName,
+                        size: decryptedBytes.length
+                    };
+                } else {
+                    // ===== 解密后是单个文件（非 ZIP），直接输出 =====
+                    const originalName = file.name.replace(/\.encrypted$/, '') || 'decrypted_file';
+                    setStatus('📄 解密成功，正在下载文件…', 'info');
+
+                    const blob = new Blob([decryptedBytes]);
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = originalName;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+
+                    showProgress(100, '完成！');
+                    setTimeout(hideProgress, 1000);
+
+                    return {
+                        type: 'single',
+                        name: originalName,
+                        size: decryptedBytes.length
+                    };
+                }
+            }
+
+            // ========== 密钥派生 ==========
+            async function deriveKey(secret, salt) {
+                const enc = new TextEncoder();
+                const keyMaterial = await crypto.subtle.importKey(
+                    'raw', enc.encode(secret), { name: 'PBKDF2' }, false, ['deriveKey']
+                );
+                return crypto.subtle.deriveKey(
+                    { name: 'PBKDF2', salt: salt, iterations: 100000, hash: 'SHA-256' },
+                    keyMaterial,
+                    { name: 'AES-GCM', length: 256 },
+                    false,
+                    ['encrypt', 'decrypt']
+                );
+            }
+
+            // ========== Base64 ==========
+            function arrayBufferToBase64(buffer) {
+                const bytes = new Uint8Array(buffer);
+                let binary = '';
+                const chunk = 0x8000;
+                for (let i = 0; i < bytes.length; i += chunk) {
+                    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+                }
+                return btoa(binary);
+            }
+
+            function base64ToArrayBuffer(base64) {
+                const binaryString = atob(base64);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                return bytes.buffer;
+            }
+
+            // ========== 随机密钥 ==========
+            function generateRandomKey() {
+                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+                let result = '';
+                for (let i = 0; i < 20; i++) {
+                    result += chars.charAt(Math.floor(Math.random() * chars.length));
+                }
+                return result;
+            }
+
+            // ========== 事件 ==========
+
+            // 全局阻止默认拖拽
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(function(eventName) {
+                document.addEventListener(eventName, function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }, false);
+            });
+
+            dropZone.addEventListener('dragenter', function(e) {
+                e.preventDefault(); e.stopPropagation();
+                dropZone.classList.add('drag-over');
+            });
+            dropZone.addEventListener('dragover', function(e) {
+                e.preventDefault(); e.stopPropagation();
+                dropZone.classList.add('drag-over');
+            });
+            dropZone.addEventListener('dragleave', function(e) {
+                e.preventDefault(); e.stopPropagation();
+                if (!dropZone.contains(e.relatedTarget)) {
+                    dropZone.classList.remove('drag-over');
+                }
+            });
+            dropZone.addEventListener('drop', async function(e) {
+                e.preventDefault(); e.stopPropagation();
+                dropZone.classList.remove('drag-over');
+
+                const items = e.dataTransfer.items;
+                const files = e.dataTransfer.files;
+
+                if (items && items.length > 0) {
+                    const entries = [];
+                    for (let i = 0; i < items.length; i++) {
+                        const item = items[i];
+                        if (item.kind === 'file') {
+                            const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
+                            if (entry) entries.push(entry);
+                        }
+                    }
+
+                    if (entries.length > 0) {
+                        const allFiles = [];
+                        let hasFolder = false;
+
+                        for (let i = 0; i < entries.length; i++) {
+                            const entry = entries[i];
+                            if (entry.isDirectory) {
+                                hasFolder = true;
+                                await traverseFileTree(entry, allFiles, '');
+                            } else {
+                                const file = await new Promise(function(resolve) {
+                                    entry.file(resolve, function() { resolve(null); });
+                                });
+                                if (file) allFiles.push({ file: file, relativePath: file.name });
+                            }
+                        }
+
+                        if (allFiles.length > 0) {
+                            addFiles(allFiles, hasFolder);
+                            return;
+                        }
+                    }
+                }
+
+                if (files && files.length > 0) {
+                    const fileItems = Array.from(files).map(function(file) {
+                        return { file: file, relativePath: file.name };
+                    });
+                    addFiles(fileItems, false);
+                }
+            });
+
+            // 按钮
+            pickFilesBtn.addEventListener('click', function(e) {
+                e.preventDefault(); e.stopPropagation();
+                fileInput.click();
+            });
+            pickFolderBtn.addEventListener('click', function(e) {
+                e.preventDefault(); e.stopPropagation();
+                if ('webkitdirectory' in document.createElement('input')) {
+                    folderInput.click();
+                } else {
+                    setStatus('❌ 当前浏览器不支持选择文件夹，请使用 Chrome/Edge，或直接拖拽文件夹。', 'error');
+                }
+            });
+
+            fileInput.addEventListener('change', function(e) {
+                if (e.target.files && e.target.files.length > 0) {
+                    const fileItems = Array.from(e.target.files).map(function(file) {
+                        return { file: file, relativePath: file.name };
+                    });
+                    addFiles(fileItems, false);
+                }
+                fileInput.value = '';
+            });
+
+            folderInput.addEventListener('change', function(e) {
+                if (e.target.files && e.target.files.length > 0) {
+                    const fileItems = Array.from(e.target.files).map(function(file) {
+                        return { file: file, relativePath: file.webkitRelativePath || file.name };
+                    });
+                    addFiles(fileItems, true);
+                }
+                folderInput.value = '';
+            });
+
+            clearAllBtn.addEventListener('click', clearAllFiles);
+            randomKeyBtn.addEventListener('click', function() {
+                keyInput.value = generateRandomKey();
+                setStatus('已生成随机密钥，请妥善保存。', 'info');
+            });
+
+            // 加密
+            encryptBtn.addEventListener('click', async function() {
+                const secret = keyInput.value.trim();
+                if (!secret) { setStatus('❌ 请输入密钥。', 'error'); return; }
+                if (currentFiles.length === 0) { setStatus('❌ 请先选择文件或文件夹。', 'error'); return; }
+                if (!zipAvailable && (isFolderMode || currentFiles.length > 1)) {
+                    setStatus('⏳ 压缩库还在加载，请稍候…', 'warning'); return;
+                }
+
+                setStatus('⏳ 正在处理，请稍候…', 'info');
+                encryptBtn.disabled = true;
+                decryptBtn.disabled = true;
+
+                try {
+                    const result = await encryptFiles(currentFiles, secret);
+                    const zipInfo = result.wasZipped ? '（已压缩为 ZIP）' : '';
+                    setStatus('✅ 加密成功！已下载: ' + result.downloadName + ' ' + zipInfo +
+                        ' (原始 ' + formatFileSize(result.originalSize) + ')', 'success');
+                } catch (err) {
+                    console.error(err);
+                    setStatus('❌ 加密失败: ' + (err.message || '未知错误'), 'error');
+                } finally {
+                    hideProgress();
+                    updateButtons();
+                }
+            });
+
+            // 解密（输出 ZIP）
+            decryptBtn.addEventListener('click', async function() {
+                const secret = keyInput.value.trim();
+                if (!secret) { setStatus('❌ 请输入密钥。', 'error'); return; }
+                if (currentFiles.length === 0) { setStatus('❌ 请先选择加密文件。', 'error'); return; }
+                if (currentFiles.length > 1) {
+                    setStatus('⚠️ 解密模式仅支持单个加密文件，请只选择一个 .encrypted 文件。', 'warning');
+                    return;
+                }
+
+                const file = currentFiles[0].file;
+                if (!file.name.endsWith('.encrypted')) {
+                    if (!confirm('所选文件不是 .encrypted 后缀，确定要尝试解密吗？')) return;
+                }
+
+                setStatus('⏳ 正在解密还原，请稍候…', 'info');
+                encryptBtn.disabled = true;
+                decryptBtn.disabled = true;
+
+                try {
+                    const result = await decryptArchive(file, secret);
+                    if (result.type === 'zip') {
+                        setStatus('✅ 解密成功！已下载 ZIP 压缩包: ' + result.name +
+                            ' (' + formatFileSize(result.size) + ')', 'success');
+                    } else {
+                        setStatus('✅ 解密成功！已下载: ' + result.name, 'success');
+                    }
+                } catch (err) {
+                    console.error(err);
+                    setStatus('❌ 解密失败: ' + (err.message || '密钥错误或文件损坏'), 'error');
+                } finally {
+                    hideProgress();
+                    updateButtons();
+                }
+            });
+
+            keyInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (!encryptBtn.disabled) encryptBtn.click();
+                    else if (!decryptBtn.disabled) decryptBtn.click();
+                }
+            });
+
+            // ========== 初始化 ==========
+            window.addEventListener('load', function() {
+                checkZipLib();
+                setStatus('💡 拖拽文件夹到上方，会自动压缩为 ZIP 再加密。解密后直接得到 ZIP 压缩包。', 'info');
+                updateFileListUI();
+            });
+
+        })();
+    </script>
+</body>
+</html>
